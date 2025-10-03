@@ -332,6 +332,7 @@ TEST_F(BaseFactory, factoryHasDefaultSuspendSupport)
 // Regression test for #4396: cloud-init ISO should be immediately accessible after creation
 TEST_F(BaseFactory, cloudInitIsoIsImmediatelyAccessible)
 {
+    MockBaseFactory factory;
     auto name = "pied-piper-valley";
     auto metadata = YAML::Node{};
     auto user_data = YAML::Load("#cloud-config\npackages:\n  - git\n");
