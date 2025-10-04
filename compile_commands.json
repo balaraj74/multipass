@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "/home/balaraj/multipass",
+    "command": "clang++ -I/home/balaraj/multipass/include -I/home/balaraj/multipass/src -I/home/balaraj/multipass/3rd-party -I/home/balaraj/multipass/3rd-party/scope_guard -I/home/balaraj/multipass/3rd-party/yaml-cpp/include -I/home/balaraj/multipass/build/gen -std=c++17 -c /home/balaraj/multipass/src/daemon/daemon.cpp",
+    "file": "/home/balaraj/multipass/src/daemon/daemon.cpp"
+  }
+]

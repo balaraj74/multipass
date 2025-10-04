@@ -634,7 +634,7 @@ struct DaemonAliasTestsuite
         mpt::MockPermissionUtils::inject<NiceMock>();
 };
 
-TEST_P(DaemonAliasTestsuite, purgeRemovesPurgedInstanceAliasesAndScripts)
+TEST_P(DaemonAliasTestsuite, purgeDoesNotRemoveAliases)
 {
     auto [commands, expected_output, expected_removed_aliases, expected_failed_removal] =
         GetParam();
@@ -666,17 +666,8 @@ TEST_P(DaemonAliasTestsuite, purgeRemovesPurgedInstanceAliasesAndScripts)
 
     ON_CALL(*mock_platform, create_alias_script(_, _)).WillByDefault(Return());
 
-    for (const auto& removed_alias : expected_removed_aliases)
-    {
-        EXPECT_CALL(*mock_platform, remove_alias_script("default." + removed_alias)).Times(1);
-        EXPECT_CALL(*mock_platform, remove_alias_script(removed_alias)).Times(1);
-    }
-
-    for (const auto& removed_alias : expected_failed_removal)
-    {
-        EXPECT_CALL(*mock_platform, remove_alias_script("default." + removed_alias))
-            .WillOnce(Throw(std::runtime_error("foo")));
-    }
+    // Aliases should NOT be automatically removed, so expect zero calls to remove_alias_script
+    EXPECT_CALL(*mock_platform, remove_alias_script(_)).Times(0);
 
     mpt::TempDir temp_dir;
     QString filename(temp_dir.path() + "/multipassd-vm-instances.json");
@@ -692,11 +683,8 @@ TEST_P(DaemonAliasTestsuite, purgeRemovesPurgedInstanceAliasesAndScripts)
     for (const auto& command : commands)
         send_command(command, cout, cerr);
 
-    for (const auto& removed_alias : expected_failed_removal)
-        EXPECT_THAT(
-            cerr.str(),
-            HasSubstr(fmt::format("Warning: 'foo' when removing alias script for default.{}\n",
-                                  removed_alias)));
+    // Verify no warnings about alias removal since we don't attempt to remove them
+    EXPECT_THAT(cerr.str(), Not(HasSubstr("removing alias script")));
 
     send_command({"aliases", "--format", "csv"}, cout);
     EXPECT_EQ(cout.str(), expected_output);
@@ -705,37 +693,22 @@ TEST_P(DaemonAliasTestsuite, purgeRemovesPurgedInstanceAliasesAndScripts)
 INSTANTIATE_TEST_SUITE_P(
     AliasDictionary,
     DaemonAliasTestsuite,
-    Values(std::make_tuple(CmdList{{"delete", "real-zebraphant"}, {"purge"}},
-                           csv_head + "lsp,primary,ls,map,default*\n",
-                           std::vector<std::string>{"lsz"},
-                           std::vector<std::string>{}),
-           std::make_tuple(CmdList{{"delete", "--purge", "real-zebraphant"}},
-                           csv_head + "lsp,primary,ls,map,default*\n",
-                           std::vector<std::string>{"lsz"},
-                           std::vector<std::string>{}),
-           std::make_tuple(CmdList{{"delete", "primary"},
-                                   {"delete", "primary", "real-zebraphant", "--purge"}},
-                           csv_head,
-                           std::vector<std::string>{"lsp", "lsz"},
-                           std::vector<std::string>{}),
-           std::make_tuple(CmdList{{"delete", "primary"},
-                                   {"delete", "primary", "real-zebraphant", "--purge"}},
-                           csv_head,
-                           std::vector<std::string>{},
-                           std::vector<std::string>{"lsp", "lsz"}),
-           std::make_tuple(CmdList{{"delete", "primary"},
-                                   {"delete", "primary", "real-zebraphant", "--purge"}},
-                           csv_head,
-                           std::vector<std::string>{"lsp"},
-                           std::vector<std::string>{"lsz"}),
+    Values(// After delete+purge of real-zebraphant, both aliases should remain (no auto-removal)
            std::make_tuple(CmdList{{"delete", "real-zebraphant"}, {"purge"}},
-                           csv_head + "lsp,primary,ls,map,default*\n",
+                           csv_head + "lsp,primary,ls,map,default*\nlsz,real-zebraphant,ls,map,default\n",
+                           std::vector<std::string>{},  // No aliases removed
+                           std::vector<std::string>{}), // No failed removals
+           // After delete --purge of real-zebraphant, both aliases should remain
+           std::make_tuple(CmdList{{"delete", "--purge", "real-zebraphant"}},
+                           csv_head + "lsp,primary,ls,map,default*\nlsz,real-zebraphant,ls,map,default\n",
                            std::vector<std::string>{},
-                           std::vector<std::string>{"lsz"}),
-           std::make_tuple(CmdList{{"delete", "real-zebraphant", "primary"}, {"purge"}},
-                           csv_head,
+                           std::vector<std::string>{}),
+           // After deleting both instances, both aliases should remain
+           std::make_tuple(CmdList{{"delete", "primary"},
+                                   {"delete", "primary", "real-zebraphant", "--purge"}},
+                           csv_head + "lsp,primary,ls,map,default*\nlsz,real-zebraphant,ls,map,default\n",
                            std::vector<std::string>{},
-                           std::vector<std::string>{"lsz", "lsp"})));
+                           std::vector<std::string>{})));
 
 TEST_F(AliasDictionary, unexistingActiveContextThrows)
 {

@@ -215,8 +215,10 @@ You can also use the `--all` option to remove all the defined aliases in the cur
 multipass unalias --all
 ```
 
-```{note}
-Aliases are also removed when the instance for which they were defined is deleted and purged. This means that `multipass delete crazy-cat --purge` will also remove the aliases `lscc` and `pwdcc`.
+```{important}
+Aliases are **not** automatically removed when instances are deleted or purged. This is because aliases are client-side features stored per-user, and automatic removal would not work correctly in multi-user environments.
+
+After deleting an instance, you should manually remove any aliases you created for it using `multipass unalias`.
 ```
 
 <!-- Discourse contributors
