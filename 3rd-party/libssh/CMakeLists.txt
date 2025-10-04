@@ -58,12 +58,13 @@ configure_file(libssh/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/libssh/config.h
 message(STATUS "Checking for 'libssh' version")
 
 # Since the main CMake file is bypassed, we have to search that CMake file to determine the proper
-# shared library versions
-file(STRINGS libssh/CMakeLists.txt libssh_VERSION REGEX "^project\\(libssh")
-file(STRINGS libssh/CMakeLists.txt LIBRARY_VERSION REGEX "^set\\(LIBRARY_VERSION")
-file(STRINGS libssh/CMakeLists.txt LIBRARY_SOVERSION REGEX "^set\\(LIBRARY_SOVERSION")
+# shared library versions. Use tolerant regex (not anchored) to allow whitespace/comments before the
+# project() or set() lines in various libssh versions.
+file(STRINGS libssh/CMakeLists.txt libssh_VERSION REGEX "project\\(libssh")
+file(STRINGS libssh/CMakeLists.txt LIBRARY_VERSION REGEX "set\\(LIBRARY_VERSION")
+file(STRINGS libssh/CMakeLists.txt LIBRARY_SOVERSION REGEX "set\\(LIBRARY_SOVERSION")
 
-string(REGEX MATCH "^project\\(libssh VERSION ([0-9]+)\\.([0-9]+)\\.([0-9]+) LANGUAGES C CXX\\)$"
+string(REGEX MATCH "project\\(libssh VERSION ([0-9]+)\\.([0-9]+)\\.([0-9]+)" 
   libssh_VERSION "${libssh_VERSION}")
 if (NOT libssh_VERSION)
     message(FATAL_ERROR "unable to find libssh project version")

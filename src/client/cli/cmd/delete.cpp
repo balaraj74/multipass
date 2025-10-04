@@ -40,34 +40,8 @@ mp::ReturnCode cmd::Delete::run(mp::ArgParser* parser)
     }
 
     auto on_success = [this](mp::DeleteReply& reply) {
-        auto size = reply.purged_instances_size();
-        for (auto i = 0; i < size; ++i)
-        {
-            const auto purged_instance = reply.purged_instances(i);
-            const auto removed_aliases = aliases.remove_aliases_for_instance(purged_instance);
-
-            for (const auto& removed_alias : removed_aliases)
-            {
-                const auto& [removal_context, removed_alias_name] = removed_alias;
-                try
-                {
-                    MP_PLATFORM.remove_alias_script(removal_context + "." + removed_alias_name);
-
-                    if (!aliases.exists_alias(removed_alias_name))
-                    {
-                        MP_PLATFORM.remove_alias_script(removed_alias_name);
-                    }
-                }
-                catch (const std::runtime_error& e)
-                {
-                    cerr << fmt::format("Warning: '{}' when removing alias script for {}.{}\n",
-                                        e.what(),
-                                        removal_context,
-                                        removed_alias_name);
-                }
-            }
-        }
-
+        // Note: Aliases are not automatically removed to avoid sync issues in multi-user contexts.
+        // Users should explicitly run 'multipass unalias' to remove aliases for deleted instances.
         return mp::ReturnCode::Ok;
     };
 
